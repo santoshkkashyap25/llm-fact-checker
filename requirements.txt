@@ -54,7 +54,7 @@ networkx
 numpy==1.26.4
 orjson==3.10.18
 packaging==24.2
-pandas==2.2.2
+pandas
 pillow==10.4.0
 preshed==3.0.10
 propcache==0.3.2
