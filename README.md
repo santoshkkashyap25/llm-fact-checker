@@ -53,7 +53,6 @@ llm-fact-checker/
 │
 ├── data/
 │   ├── trusted_facts.csv         # Verified government facts
-│   ├── pib_rss_feed.xml          # Raw press release feed
 │   └── faiss_index.bin           # FAISS vector index of embedded facts
 │
 ├── env/
@@ -74,19 +73,38 @@ llm-fact-checker/
 
 ## Sample Input
 
-**Claim:**
+**Claim 1:**
 
-> "The Indian government has announced free electricity to all farmers starting July 2025."
+> "India met 241 GW peak power demand on 9th June 2025 with zero shortage."
+
+**Output:**
+
+```json
+{
+  "verdict": "True",
+  "confidence score": 1.00,
+  "evidence": [
+    "India met 241 GW peak power demand on 9th June 2025 with zero shortage"
+  ],
+  "reasoning": "The claim is supported by matching evidence: India met 241 GW peak power demand on 9th June 2025 with zero shortage"
+}
+```
+
+
+**Claim 2:**
+
+> "India met 341 GW peak power demand on 9th June 2025 with zero shortage."
 
 **Output:**
 
 ```json
 {
   "verdict": "False",
+  "confidence score": 0.95,
   "evidence": [
-    "No official policy was found for July 2025 offering free electricity to all farmers."
+    "India met 241 GW peak power demand on 9th June 2025 with zero shortage"
   ],
-  "reasoning": "The retrieved facts mention electricity reforms but no confirmation about free electricity to all farmers in July 2025."
+  "reasoning": "The claim states that India met 341 GW peak power demand on 9th June 2025 with zero shortage. However, the evidence only supports 241 GW peak power demand on 9th June 2025 with zero shortage. Therefore, the claim is false."
 }
 ```
 
@@ -147,7 +165,5 @@ python pipeline.py
 Or use the UI via Streamlit.
 
 ---
-
-<!-- ## 📸 Screenshots -->
 
 <!-- --- -->
