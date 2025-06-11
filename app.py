@@ -27,7 +27,7 @@ if "HUGGINGFACEHUB_API_TOKEN" not in os.environ:
         logging.info("Loaded Hugging Face API token from Streamlit secrets.")
     except:
         logging.error("Hugging Face API token not found in .env or Streamlit secrets.")
-        st.error("Hugging Face API token not found! Please set it in your Streamlit secrets or a .env file.", icon="🚨")
+        st.error("Hugging Face API token not found! Please set it in your Streamlit secrets or a .env file.")
         st.stop()
 
 # --- UI ---
@@ -36,11 +36,11 @@ st.markdown("This system analyzes a statement, extracts the key claim, and verif
 
 input_text = st.text_area(
     "Enter a statement to verify:", 
-    "The Indian government has announced free electricity to all farmers starting July 2025.",
+    "India met 241 GW peak power demand on 9th June 2025 with zero shortage.",
     height=100
 )
 
-if st.button("🔎 Verify Statement"):
+if st.button("Verify Statement"):
     if not input_text.strip():
         st.warning("Please enter a statement.")
         logging.warning("User submitted an empty input.")
@@ -69,7 +69,7 @@ if st.button("🔎 Verify Statement"):
 
             except FileNotFoundError as e:
                 logging.exception("Initialization Error - Vector DB missing.")
-                st.error(f"Initialization Error: {e}. Please ensure the vector database has been built by running `build_database.py`.", icon="🚨")
+                st.error(f"Initialization Error: {e}. Please ensure the vector database has been built by running `build_database.py`.")
             except Exception as e:
                 logging.exception("Unexpected error during pipeline execution.")
-                st.error(f"An unexpected error occurred: {e}", icon="🔥")
+                st.error(f"An unexpected error occurred: {e}")
