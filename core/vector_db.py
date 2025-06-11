@@ -47,7 +47,7 @@ class VectorDB:
             # L2 distance needs to be converted to a more intuitive similarity score
             # similarity = 1 / (1 + distance)
             similarity = 1 / (1 + dist)
-            if i > -1 and similarity >= threshold:
+            if i > -1:
                 results.append((self.facts[i], similarity))
         
         return results
