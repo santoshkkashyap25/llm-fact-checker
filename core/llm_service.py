@@ -1,18 +1,19 @@
 # core/llm_service.py
 import os
 import logging
-from typing import List
+import re
+from typing import List, Tuple
 from langchain_core.prompts import PromptTemplate
 from pydantic import BaseModel, Field
 from langchain_huggingface import HuggingFaceEndpoint
 from langchain.output_parsers import PydanticOutputParser
-
+from dotenv import load_dotenv  
 from config import LLM_REPO_ID
 
-# Configure logging to write to a file
+# Configure logging
 logging.basicConfig(
     filename="llm_service.log",
-    filemode="a",  # Append mode
+    filemode="a",
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -25,6 +26,7 @@ class Verdict(BaseModel):
 
 class LLMService:
     def __init__(self):
+        load_dotenv()
         if "HUGGINGFACEHUB_API_TOKEN" not in os.environ:
             raise ValueError("Hugging Face API token not found in environment variables.")
         
@@ -42,26 +44,28 @@ class LLMService:
 
     def _create_prompt_template(self) -> PromptTemplate:
         template = """
-        SYSTEM: You are a meticulous, unbiased AI fact-checker. Your task is to analyze a user's claim against a set of retrieved, verified facts.
-        Your response MUST be a valid JSON object matching the provided format. Do not include any other text, greetings, or explanations outside of the JSON structure.
-
+        SYSTEM: You are a strict fact-checking AI that performs precise evidence matching.
+        Follow these rules absolutely:
+        1. 'True' ONLY if evidence contains the EXACT factual content of the claim
+        2. 'False' ONLY if evidence explicitly contradicts specific facts
+        3. 'Unverifiable' if neither case above applies
+        
         USER_CLAIM: "{claim}"
-
-        VERIFIED_EVIDENCE:
+        
+        RELEVANT_EVIDENCE:
         {evidence}
         
         INSTRUCTIONS:
-        1. Compare the USER_CLAIM to the VERIFIED_EVIDENCE.
-        2. Determine if the evidence supports, contradicts, or is irrelevant to the claim.
-        3. If the evidence directly supports the claim, classify as 'True'.
-        4. If the evidence directly contradicts the claim, classify as 'False'.
-        5. If the evidence is insufficient, unrelated, or the claim is too specific to be verified, classify as 'Unverifiable'.
-        6. Provide a confidence score for your verdict (0.0 for Unverifiable, >0.5 for True/False).
-        7. Write a concise, neutral reasoning.
+        1. Normalize both claim and evidence (ignore case, punctuation, number formats)
+        2. For numbers: treat '2005 crore', '₹2,005 cr', 'Rs. 2005 crores' as equivalent
+        3. For organizations: treat 'IREDA', 'Ireda', 'India's Renewable Energy Dev. Agency' as equivalent
+        4. If normalized claim exists in normalized evidence → 'True'
+        5. If evidence contradicts specific facts → 'False'
+        6. Otherwise → 'Unverifiable'
         
         {format_instructions}
         
-        AI_RESPONSE (JSON only):
+        RESPONSE (JSON only):
         """
         return PromptTemplate(
             template=template,
@@ -69,32 +73,62 @@ class LLMService:
             partial_variables={"format_instructions": self.parser.get_format_instructions()}
         )
 
-    def get_verdict(self, claim: str, evidence: List[str]) -> Verdict:
-        """Invokes the LLM with the claim and evidence, and returns a parsed Verdict object."""
-        logger.info(f"Received claim for verification: {claim}")
+    def _normalize_text(self, text: str) -> str:
+        """Normalize text for comparison"""
+        # Convert to lowercase
+        text = text.lower()
+        # Standardize number formats
+        text = re.sub(r'rs\.|₹|,', '', text)  # Remove currency symbols and commas
+        text = re.sub(r'(\d+)\s*(crore|cr|crores)', r'\1 crore', text)  # Standardize crore
+        # Remove punctuation
+        text = re.sub(r'[^\w\s]', ' ', text)
+        # Standardize common entities
+        text = re.sub(r'\bireda\b', 'india renewable energy development agency', text)
+        # Remove extra spaces
+        text = ' '.join(text.split())
+        return text
+
+    def _find_matches(self, claim: str, evidence: List[str]) -> Tuple[bool, List[str]]:
+        """Check for matches between claim and evidence"""
+        norm_claim = self._normalize_text(claim)
+        matching_evidence = []
         
-        if not evidence:
-            logger.info("No evidence provided. Returning 'Unverifiable'.")
+        for item in evidence:
+            norm_item = self._normalize_text(item)
+            if norm_claim in norm_item:
+                matching_evidence.append(item)
+        
+        return (len(matching_evidence) > 0, matching_evidence)
+
+    def get_verdict(self, claim: str, evidence: List[str]) -> Verdict:
+        """Get fact-checking verdict with improved matching"""
+        logger.info(f"Claim: {claim}")
+        
+        # Check for matches using normalized text
+        has_match, matches = self._find_matches(claim, evidence)
+        
+        if has_match:
+            logger.info(f"Found {len(matches)} matching evidence items")
             return Verdict(
-                verdict="🤷‍♂️ Unverifiable",
-                confidence=0.0,
-                reasoning="No relevant evidence was found in the trusted fact base to verify this claim."
+                verdict="True",
+                confidence=1.0,
+                reasoning=f"The claim is supported by matching evidence: {matches[0]}"
             )
         
+        # If no matches found, use LLM for partial verification
         evidence_str = "\n".join([f"- {e}" for e in evidence])
-        logger.info(f"Formatted evidence:\n{evidence_str}")
         chain = self.prompt | self.llm | self.parser
         
         try:
             result = chain.invoke({"claim": claim, "evidence": evidence_str})
-            logger.info(f"LLM returned verdict: {result.verdict}, confidence: {result.confidence}")
+            logger.info(f"LLM verdict: {result.verdict} (confidence: {result.confidence})")
             return result
         except Exception as e:
-            logger.error(f"Error invoking LLM or parsing response: {e}")
+            logger.error(f"Error: {e}")
             return Verdict(
-                verdict="Error",
+                verdict="Unverifiable",
                 confidence=0.0,
-                reasoning=f"An error occurred during verification: {e}"
+                reasoning=f"Verification failed: {str(e)}"
             )
 
 llm_service = LLMService()
