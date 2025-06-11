@@ -63,7 +63,7 @@ llm-fact-checker/
 ├── build_database.py            # Script to build vector index
 ├── pipeline.py                  # Main pipeline for processing and verdicts
 ├── config.py                    # Config file for paths, models etc.
-├── test_script.py               # Optional script for quick testing
+├── test_script.py               # script for quick testing
 ├── claim_extractor.log          # Logs
 ├── llm_service.log              # Logs
 ├── requirements.txt             # Dependencies
