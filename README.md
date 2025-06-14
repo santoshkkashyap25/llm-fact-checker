@@ -20,7 +20,7 @@ Fact-checking system that takes in a news headline or social media post, extract
 
 ### 2. **Trusted Fact Base**
 
-* CSV file contain 30–50 verified facts from sources like PIB.
+* CSV file contain 20-2 verified facts from source like PIB.
 * Code: `data/trusted_facts.csv`
 
 ### 3. **Embedding + Vector Store**
