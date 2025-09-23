@@ -1,7 +1,7 @@
 # LLM-Powered Fact Checker
----
 
-## Objective
+[Visit the App] : https://factschecker.streamlit.app/
+---
 
 Fact-checking system that takes in a news headline or social media post, extracts key claims, verifies them against a vector database of trusted facts, and classifies the result as:
 
@@ -16,28 +16,23 @@ Fact-checking system that takes in a news headline or social media post, extract
 ### 1. **Claim/Entity Detection**
 
 * Extracts key claims/entities from text.
-* Code: `core/claim_extractor.py`
 
 ### 2. **Trusted Fact Base**
 
 * CSV file contain 20-2 verified facts from source like PIB.
-* Code: `data/trusted_facts.csv`
 
 ### 3. **Embedding + Vector Store**
 
 * Embeds trusted facts using Sentence Transformers.
 * Stores in FAISS index: `data/faiss_index.bin`
-* Code: `build_database.py`, `core/vector_db.py`
 
 ### 4. **LLM-Powered Comparison**
 
 * Extracted claims compared with top-k facts using an LLM.
-* Code: `core/llm_service.py`, `pipeline.py`
 
 ### 5. **Streamlit UI**
 
 * Lightweight frontend to test claims.
-* Code: `app.py`
 
 ---
 
@@ -154,16 +149,8 @@ streamlit run app.py
 
 ---
 
-## Testing
+ ## Other Works
 
-You can test directly using:
-
-```bash
-python pipeline.py
-```
-
-Or use the UI via Streamlit.
-
----
+[Visit the App] : https://transnlp.streamlit.app/
 
 <!-- --- -->

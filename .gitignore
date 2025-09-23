@@ -1,0 +1,37 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment files
+.env
+env/
+
+# Logs
+*.log
+
+# Data files
+*.xml
+
+# VSCode settings
+.vscode/
+
+# Python virtual environment folders
+venv/
+.venv/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Pytest cache
+.pytest_cache/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore built database files if any
+*.db
+
+# Ignore generated index files
+*.idx
