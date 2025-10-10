@@ -13,3 +13,4 @@ numpy==1.26.4
 bs4
 feedparser
 langchain_community
+plotly
