@@ -10,7 +10,7 @@
 <table>
   <tr>
     <td><img src="screenshots/true.jpg" alt="True Fact" width="400"/><br/><sub><b>True Fact</b></sub></td>
-    <td><img src="screenshots/false.jpg" alt="False Fact" width="400"/><br/><sub><b>False Fact</b></sub></td>
+    <td><img src="screenshots/false.jpg" alt="False Claim" width="400"/><br/><sub><b>False Claim</b></sub></td>
     <td><img src="screenshots/unverifiable.jpg" alt="Unverifiable Claim" width="400"/><br/><sub><b>Unverifiable Claim</b></sub></td>
   </tr>
   <tr>
