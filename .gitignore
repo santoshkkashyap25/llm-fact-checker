@@ -35,3 +35,9 @@ Thumbs.db
 
 # Ignore generated index files
 *.idx
+
+# Data files
+data/faiss_index.bin
+
+# Logs / metrics
+metrics.jsonl
