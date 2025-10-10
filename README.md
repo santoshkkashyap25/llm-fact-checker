@@ -16,8 +16,10 @@
   <tr>
     <td><img src="screenshots/verdict.jpg" alt="Verdict Distribution" width="400"/><br/><sub><b>Verdict Distribution</b></sub></td>
     <td><img src="screenshots/cache.jpg" alt="Caching" width="400"/><br/><sub><b>Caching</b></sub></td>
+    <td></td> <!-- Empty cell if you have only 5 images -->
   </tr>
 </table>
+
 
 ---
 
