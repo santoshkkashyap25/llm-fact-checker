@@ -11,12 +11,14 @@
   <tr>
     <td><img src="screenshots/true.jpg" alt="True Fact" width="400"/><br/><sub><b>True Fact</b></sub></td>
     <td><img src="screenshots/false.jpg" alt="False Claim" width="400"/><br/><sub><b>False Claim</b></sub></td>
-    <td><img src="screenshots/unverifiable.jpg" alt="Unverifiable Claim" width="400"/><br/><sub><b>Unverifiable Claim</b></sub></td>
   </tr>
   <tr>
+    <td><img src="screenshots/unverifiable.jpg" alt="Unverifiable Claim" width="400"/><br/><sub><b>Unverifiable Claim</b></sub></td>
     <td><img src="screenshots/verdict.jpg" alt="Verdict Distribution" width="400"/><br/><sub><b>Verdict Distribution</b></sub></td>
+  </tr>
+  <tr>
     <td><img src="screenshots/cache.jpg" alt="Caching" width="400"/><br/><sub><b>Caching</b></sub></td>
-    <td></td> <!-- Empty cell if you have only 5 images -->
+    <!-- <td><img src="screenshots/extra.jpg" alt="Extra" width="400"/><br/><sub><b>Extra</b></sub></td> -->
   </tr>
 </table>
 
