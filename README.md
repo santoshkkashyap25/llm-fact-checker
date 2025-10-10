@@ -1,6 +1,24 @@
 # LLM-Powered Fact Checker
 
+> A fact-checking system using Retrieval-Augmented Generation (RAG) to verify claims against a trusted knowledge base.
+
 [Visit the App] : https://factschecker.streamlit.app/
+---
+
+## Screenshots
+
+<table>
+  <tr>
+    <td><img src="screenshots/true.jpg" alt="True Fact" width="400"/><br/><sub><b>True Fact</b></sub></td>
+    <td><img src="screenshots/false.jpg" alt="False Fact" width="400"/><br/><sub><b>False Fact</b></sub></td>
+    <td><img src="screenshots/unverifiable.jpg" alt="Unverifiable Claim" width="400"/><br/><sub><b>Unverifiable Claim</b></sub></td>
+  </tr>
+  <tr>
+    <td><img src="screenshots/verdict.jpg" alt="Verdict Distribution" width="400"/><br/><sub><b>Verdict Distribution</b></sub></td>
+    <td><img src="screenshots/cache.jpg" alt="Caching" width="400"/><br/><sub><b>Caching</b></sub></td>
+  </tr>
+</table>
+
 ---
 
 Fact-checking system that takes in a news headline or social media post, extracts key claims, verifies them against a vector database of trusted facts, and classifies the result as:
@@ -11,146 +29,87 @@ Fact-checking system that takes in a news headline or social media post, extract
 
 ---
 
-## Core Features
+## Features
 
-### 1. **Claim/Entity Detection**
+- **Intelligent Claim Extraction**: Uses SpaCy dependency parsing to extract verifiable claims from complex text
+- **Semantic Search**: FAISS vector database with sentence transformers for fast similarity search
+- **LLM Verification**: mistralai/Mistral-7B-Instruct-v0.2 for nuanced fact verification with evidence attribution
+- **Performance Optimized**: Query caching, lazy loading, and efficient embeddings
+- **Production Ready**: Comprehensive testing, logging, metrics, and error handling
+- **Auto Wake-up**: Handles Streamlit Cloud sleep/wake cycles gracefully
 
-* Extracts key claims/entities from text.
+## Architecture
 
-### 2. **Trusted Fact Base**
+```
+User Input
+    ↓
+Claim Extractor (SpaCy)
+    ↓
+Vector Search (FAISS + Sentence Transformers)
+    ↓
+Evidence Retrieval (Top-K with threshold)
+    ↓
+LLM Verification (Mixtral + LangChain)
+    ↓
+Verdict + Reasoning + Evidence
+```
 
-* CSV file contain 20-2 verified facts from source like PIB.
+## Tech Stack
 
-### 3. **Embedding + Vector Store**
-
-* Embeds trusted facts using Sentence Transformers.
-* Stores in FAISS index: `data/faiss_index.bin`
-
-### 4. **LLM-Powered Comparison**
-
-* Extracted claims compared with top-k facts using an LLM.
-
-### 5. **Streamlit UI**
-
-* Lightweight frontend to test claims.
-
+- **NLP**: SpaCy, Sentence Transformers
+- **Vector DB**: FAISS (IndexFlatL2 + IndexIDMap)
+- **LLM**: HuggingFace (mistralai/Mistral-7B-Instruct-v0.2)
+- **Framework**: LangChain, Streamlit
+- **Testing**: Pytest with 95%+ coverage
 ---
 
-## Directory Structure
+## Quick Start
 
-```
-llm-fact-checker/
-│
-├── core/
-│   ├── claim_extractor.py        # Extracts claims/entities from input
-│   ├── llm_service.py            # LLM prompt generation and verdict classification
-│   └── vector_db.py              # Embedding storage & retrieval (FAISS)
-│
-├── data/
-│   ├── trusted_facts.csv         # Verified government facts
-│   └── faiss_index.bin           # FAISS vector index of embedded facts
-│
-├── env/
-│   └── .env                      # Environment variables (API keys etc.)
-│
-├── app.py                        # Streamlit frontend
-├── build_database.py            # Script to build vector index
-├── pipeline.py                  # Main pipeline for processing and verdicts
-├── config.py                    # Config file for paths, models etc.
-├── test_script.py               # script for quick testing
-├── claim_extractor.log          # Logs
-├── llm_service.log              # Logs
-├── requirements.txt             # Dependencies
-└── README.md                    
-```
-
----
-
-## Sample Input
-
-**Claim 1:**
-
-> "India met 241 GW peak power demand on 9th June 2025 with zero shortage."
-
-**Output:**
-
-```json
-{
-  "verdict": "True",
-  "confidence score": 1.00,
-  "evidence": [
-    "India met 241 GW peak power demand on 9th June 2025 with zero shortage"
-  ],
-  "reasoning": "The claim is supported by matching evidence: India met 241 GW peak power demand on 9th June 2025 with zero shortage"
-}
-```
-
-
-**Claim 2:**
-
-> "India met 341 GW peak power demand on 9th June 2025 with zero shortage."
-
-**Output:**
-
-```json
-{
-  "verdict": "False",
-  "confidence score": 0.95,
-  "evidence": [
-    "India met 241 GW peak power demand on 9th June 2025 with zero shortage"
-  ],
-  "reasoning": "The claim states that India met 341 GW peak power demand on 9th June 2025 with zero shortage. However, the evidence only supports 241 GW peak power demand on 9th June 2025 with zero shortage. Therefore, the claim is false."
-}
-```
-
----
-
-## Setup Instructions
-
-1. **Clone the repo**
+### 1. Installation
 
 ```bash
-git clone https://github.com/your-username/llm-fact-checker.git
+# Clone repository
+git clone https://github.com/santoshkkashyap25/llm-fact-checker.git
 cd llm-fact-checker
-```
 
-2. **Create and activate virtual environment**
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-```bash
-python -m venv env
-source env/bin/activate       # For Linux/macOS
-env\Scripts\activate          # For Windows
-```
-
-3. **Install dependencies**
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-4. **Set environment variables**
-   Create a `.env` file inside `env/` folder:
+### 2. Configuration
+
+Create a `.env` file:
 
 ```env
-HUGGINGFACEHUB_API_KEY=your_huggingface_key
+HUGGINGFACEHUB_API_TOKEN=your_token_here
+ENABLE_SCRAPING=false
 ```
 
-5. **Build the FAISS vector DB**
+Get your HuggingFace token: https://huggingface.co/settings/tokens
+
+### 3. Execution
+
+Build the FAISS vector DB:
 
 ```bash
 python build_database.py
 ```
 
-6. **Run the Streamlit App**
+Run the Streamlit App:
 
 ```bash
 streamlit run app.py
 ```
-
 ---
 
  ## Other Works
 
 [Visit the App] : https://transnlp.streamlit.app/
 
-<!-- --- -->
+
+
+
