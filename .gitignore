@@ -38,3 +38,6 @@ Thumbs.db
 
 # Logs / metrics
 metrics.jsonl
+
+htmlcov/
+coverage.xml
