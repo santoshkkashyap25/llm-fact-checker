@@ -5,10 +5,10 @@ import re
 from typing import List, Tuple, Optional
 from langchain_core.prompts import PromptTemplate
 from pydantic import BaseModel, Field
-from huggingface_hub import InferenceClient
+from groq import Groq
 import json
 from dotenv import load_dotenv
-from config import LLM_REPO_ID
+from config import GROQ_MODEL
 from core.cache import query_cache
 
 logging.basicConfig(level=logging.INFO)
@@ -24,16 +24,15 @@ class LLMService:
     
     def __init__(self):
         load_dotenv()
-        if "HUGGINGFACEHUB_API_TOKEN" not in os.environ:
+        if "GROQ_API_KEY" not in os.environ:
             raise ValueError(
-                "Hugging Face API token not found. "
-                "Set HUGGINGFACEHUB_API_TOKEN in environment or .env file."
+                "Groq API key not found. "
+                "Set GROQ_API_KEY in environment or .env file."
             )
         
-        logger.info("Initializing HuggingFace LLM endpoint...")
-        self.llm = InferenceClient(
-            model=LLM_REPO_ID,
-            token=os.environ["HUGGINGFACEHUB_API_TOKEN"]
+        logger.info("Initializing Groq LLM client...")
+        self.client = Groq(
+            api_key=os.environ.get("GROQ_API_KEY")
         )
         self.prompt = self._create_enhanced_prompt()
 
@@ -74,12 +73,12 @@ Apply normalization:
 - "2005 crore" = "₹2,005 cr" = "Rs. 2005 crores"
 - "IREDA" = "India Renewable Energy Development Agency"
 
-Return a JSON with these fields: verdict, confidence, reasoning."""
+Return a JSON with these fields: verdict, confidence, reasoning. The output MUST ONLY be the valid JSON string."""
         
         return PromptTemplate(
-    template=template,
-    input_variables=["claim", "evidence"]
-)
+            template=template,
+            input_variables=["claim", "evidence"]
+        )
 
     
     def _normalize_text(self, text: str) -> str:
@@ -150,10 +149,12 @@ Return a JSON with these fields: verdict, confidence, reasoning."""
             user_message = self.prompt.format(claim=claim, evidence=evidence_str)
             messages = [{"role": "user", "content": user_message}]
             
-            response = self.llm.chat_completion(
+            response = self.client.chat.completions.create(
+                model=GROQ_MODEL,
                 messages=messages,
                 max_tokens=512,
-                temperature=0.2
+                temperature=0.2,
+                response_format={"type": "json_object"}
             )
             
             # Parse JSON output

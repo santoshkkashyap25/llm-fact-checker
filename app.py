@@ -31,13 +31,13 @@ st.set_page_config(
 
 # --- Authentication ---
 load_dotenv()
-if "HUGGINGFACEHUB_API_TOKEN" not in os.environ:
+if "GROQ_API_KEY" not in os.environ:
     try:
-        os.environ["HUGGINGFACEHUB_API_TOKEN"] = st.secrets["huggingface"]["api_token"]
+        os.environ["GROQ_API_KEY"] = st.secrets["groq"]["api_key"]
         logger.info("Loaded API token from Streamlit secrets")
     except:
         logger.error("API token not found")
-        st.error("Hugging Face API token not configured. Please set it in Streamlit secrets.")
+        st.error("Groq API key not configured. Please set it in Streamlit secrets or .env.")
         st.stop()
 
 # --- Session State Initialization ---

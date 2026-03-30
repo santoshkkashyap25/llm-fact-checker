@@ -8,31 +8,21 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 FACTS_CSV_PATH = DATA_DIR / "trusted_facts.csv"
 VECTOR_INDEX_PATH = DATA_DIR / "faiss_index.bin"
+BM25_INDEX_PATH = DATA_DIR / "bm25_index.pkl"
 METRICS_PATH = BASE_DIR / "metrics.jsonl"
 CACHE_PATH = DATA_DIR / "query_cache.json"
 
 # --- Models ---
-# Faster, smaller
 EMBEDDING_MODEL = 'all-MiniLM-L6-v2'  # 384d, very fast
+CROSS_ENCODER_MODEL = 'cross-encoder/ms-marco-MiniLM-L-6-v2' # For re-ranking
 
-# Better accuracy, larger  
-# EMBEDDING_MODEL = 'sentence-transformers/all-mpnet-base-v2'  # 768d
-
-# Multilingual support
-# EMBEDDING_MODEL = 'sentence-transformers/paraphrase-multilingual-mpnet-base-v2'
-
-# For faster responses (less accurate)
-# LLM_REPO_ID = "google/flan-t5-large"
-
-# For better accuracy (slower)
-LLM_REPO_ID = "mistralai/Mistral-7B-Instruct-v0.2"
-
-# For balanced performance
-# LLM_REPO_ID = "HuggingFaceH4/zephyr-7b-beta"
+# LLM Generation Model
+GROQ_MODEL = "llama-3.1-8b-instant"  # Super fast Llama 3 on Groq
 SPACY_MODEL = "en_core_web_md"
 
 # --- RAG Pipeline Parameters ---
-TOP_K_RESULTS = 5  
+TOP_K_RETRIEVE = 15     # Number of docs to fetch from Vector DB (FAISS) + BM25 combined
+TOP_K_RERANK_RESULTS = 3 # Number of top docs after re-ranking to send to LLM
 CONFIDENCE_THRESHOLD = 0.50
 SIMILARITY_MATCH_THRESHOLD = 0.85
 

@@ -5,9 +5,12 @@ from sentence_transformers import SentenceTransformer
 import pandas as pd
 from typing import List, Tuple, Dict, Any, Optional
 import logging
+import pickle
+from rank_bm25 import BM25Okapi
 from config import (
     EMBEDDING_MODEL, VECTOR_INDEX_PATH, 
-    FACTS_CSV_PATH, DATA_DIR
+    FACTS_CSV_PATH, DATA_DIR, BM25_INDEX_PATH,
+    TOP_K_RETRIEVE
 )
 
 logger = logging.getLogger(__name__)
@@ -19,9 +22,11 @@ class VectorDB:
         self.embedding_model = None
         self.embedding_dim = None
         self.index = None
+        self.bm25 = None
         self.facts = []
         self.metadata = []
         self.index_path = VECTOR_INDEX_PATH
+        self.bm25_path = BM25_INDEX_PATH
     
     def _initialize_model(self):
         """Lazy load embedding model"""
@@ -49,6 +54,14 @@ class VectorDB:
             self.facts = df["statement"].tolist()
             self.metadata = df.to_dict('records') if len(df.columns) > 1 else None
             
+            try:
+                with open(self.bm25_path, 'rb') as f:
+                    self.bm25 = pickle.load(f)
+                logger.info("BM25 index loaded.")
+            except FileNotFoundError:
+                logger.warning("BM25 index not found. Please rebuild database.")
+                self.bm25 = None
+                
             logger.info(f"VectorDB loaded: {len(self.facts)} facts indexed")
             
         except Exception as e:
@@ -81,6 +94,13 @@ class VectorDB:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         faiss.write_index(self.index, str(self.index_path))
         
+        # Build and Save BM25 Index
+        logger.info("Building BM25 index...")
+        tokenized_facts = [f.lower().split() for f in facts]
+        self.bm25 = BM25Okapi(tokenized_facts)
+        with open(self.bm25_path, 'wb') as f:
+            pickle.dump(self.bm25, f)
+        
         self.facts = facts
         self.metadata = metadata
         
@@ -92,41 +112,40 @@ class VectorDB:
     def search(
         self,
         query: str,
-        k: int,
-        threshold: float
-    ) -> List[Tuple[str, float, Optional[Dict]]]:
+        k: int = TOP_K_RETRIEVE,
+    ) -> List[str]:
         """
-        Search for similar facts with confidence threshold.
-        Returns: List of (fact_text, similarity_score, metadata)
+        Hybrid Search: Retrieve top K from FAISS and top K from BM25.
+        Returns: A unique list of retrieved facts.
         """
         if self.index is None:
             self.load()
+            
+        k = min(k, len(self.facts))
+        retrieved_facts = set()
         
-        # Generate query embedding
+        # 1. FAISS Search
         query_embedding = self.embedding_model.encode([query])
-        
-        # Search index
         distances, indices = self.index.search(
-            query_embedding.astype('float32'),
-            min(k, len(self.facts))  # Don't request more than we have
+            query_embedding.astype('float32'), k
         )
         
-        results = []
-        for i, dist in zip(indices[0], distances[0]):
-            if i == -1:  # Invalid index
-                continue
-            
-            # Convert L2 distance to similarity score
-            similarity = 1 / (1 + dist)
-            
-            # Apply threshold
-            if similarity >= threshold:
-                fact = self.facts[i]
-                meta = self.metadata[i] if self.metadata else None
-                results.append((fact, similarity, meta))
+        for i in indices[0]:
+            if i != -1:
+                retrieved_facts.add(self.facts[i])
         
-        logger.info(f"Retrieved {len(results)} facts above threshold {threshold}")
-        return results
+        # 2. BM25 Search
+        if self.bm25 is not None:
+            tokenized_query = query.lower().split()
+            bm25_scores = self.bm25.get_scores(tokenized_query)
+            top_bm25_indices = bm25_scores.argsort()[::-1][:k]
+            
+            for i in top_bm25_indices:
+                if bm25_scores[i] > 0: # Only if it actually matched
+                    retrieved_facts.add(self.facts[i])
+        
+        logger.info(f"Retrieved {len(retrieved_facts)} unique facts via Hybrid Search")
+        return list(retrieved_facts)
     
     def get_stats(self) -> Dict[str, Any]:
         """Get database statistics"""

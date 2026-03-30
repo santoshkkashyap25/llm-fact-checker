@@ -5,8 +5,9 @@ from typing import Dict, Any
 from core.claim_extractor import claim_extractor
 from core.vector_db import vector_db
 from core.llm_service import llm_service
+from core.re_ranker import re_ranker
 from core.metrics import metrics_collector, PipelineMetrics
-from config import TOP_K_RESULTS, CONFIDENCE_THRESHOLD
+from config import TOP_K_RETRIEVE, TOP_K_RERANK_RESULTS
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,18 +37,26 @@ def run_fact_checking_pipeline(raw_text: str, use_cache: bool = True) -> Dict[st
         extraction_time = time.time() - extraction_start
         logger.info(f"[1/3] Claim extracted in {extraction_time:.2f}s: {claim}")
         
-        # Stage 2: Evidence Retrieval
+        # Stage 2: Evidence Retrieval & Re-ranking
         retrieval_start = time.time()
-        retrieved_results = vector_db.search(
+        
+        # 2a. Hybrid Search Retrieval (FAISS + BM25)
+        retrieved_docs = vector_db.search(
             query=claim,
-            k=TOP_K_RESULTS,
-            threshold=CONFIDENCE_THRESHOLD
+            k=TOP_K_RETRIEVE
+        )
+        
+        # 2b. CrossEncoder Re-ranking
+        reranked_results = re_ranker.rerank(
+            query=claim,
+            documents=retrieved_docs,
+            top_k=TOP_K_RERANK_RESULTS
         )
         retrieval_time = time.time() - retrieval_start
         
         # Extract evidence texts and scores
-        evidence_items = [item[0] for item in retrieved_results]
-        evidence_scores = [item[1] for item in retrieved_results]
+        evidence_items = [item[0] for item in reranked_results]
+        evidence_scores = [float(item[1]) for item in reranked_results]
         
         logger.info(
             f"[2/3] Retrieved {len(evidence_items)} evidence items in {retrieval_time:.2f}s"
