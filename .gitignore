@@ -38,6 +38,16 @@ Thumbs.db
 
 # Logs / metrics
 metrics.jsonl
+*.log
 
+# Coverage
 htmlcov/
 coverage.xml
+
+# App Data (Large indices and local sets)
+data/
+tmp/
+.env
+
+# Models
+# models/

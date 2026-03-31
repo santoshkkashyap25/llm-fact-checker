@@ -6,7 +6,10 @@ import pandas as pd
 from datetime import datetime
 from typing import List, Dict
 import logging
-from config import PIB_RSS_URL, FACTS_CSV_PATH
+from config import (
+    PIB_RSS_URL, FACTLY_RSS_URL, WEBQOOF_RSS_URL, 
+    NEWSCHECKER_RSS_URL, FACTS_CSV_PATH, SCRAPE_LIMIT_PER_SOURCE
+)
 
 logger = logging.getLogger(__name__)
 
@@ -15,75 +18,71 @@ class DataScraper:
     
     def __init__(self):
         self.sources = {
-            'pib': PIB_RSS_URL,
+            'PIB India': PIB_RSS_URL,
+            'Factly': FACTLY_RSS_URL,
+            'WebQoof (The Quint)': WEBQOOF_RSS_URL,
+            'Newschecker': NEWSCHECKER_RSS_URL
         }
-        self.scraped_facts = []
     
-    def scrape_pib_rss(self) -> List[Dict[str, str]]:
-        """Scrape PIB RSS feed for government announcements"""
+    def _scrape_rss(self, source_name: str, url: str) -> List[Dict[str, str]]:
+        """Generic RSS scraper for fact-checking sources"""
         try:
-            feed = feedparser.parse(PIB_RSS_URL)
+            logger.info(f"Scraping {source_name} from {url}...")
+            
+            # Use custom headers to avoid bot-blocking
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            response = requests.get(url, headers=headers, timeout=15)
+            feed = feedparser.parse(response.content)
+            
             facts = []
             
-            for entry in feed.entries[:50]:  # Limit to recent 50
-                # Extract clean statement from title and summary
-                statement = self._clean_text(entry.get('title', ''))
-                if len(statement.split()) > 5:  # Only substantial statements
+            # Use limit from config
+            entries = feed.entries[:SCRAPE_LIMIT_PER_SOURCE]
+            
+            for entry in entries:
+                # More robust content extraction
+                content = entry.get('summary', 
+                                   entry.get('description', 
+                                            entry.get('content', [{'value': ''}])[0].get('value', '')))
+                
+                # Clean HTML if present
+                clean_content = BeautifulSoup(content, "html.parser").get_text()
+                
+                # Title often contains the core claim in fact-check feeds
+                title = entry.get('title', '')
+                
+                # Heuristic: Prefer the title for government releases, 
+                # but the summary/description for factcheckers (which often debunk the title)
+                if source_name == 'PIB India':
+                    statement = title
+                else:
+                    # For fact checkers, the title is usually "Fact Check: [Claim]"
+                    # We want to extract the claim part
+                    statement = title.replace("Fact Check:", "").replace("FACT CHECK:", "").strip()
+                    if len(statement.split()) < 4:
+                        statement = clean_content
+                
+                statement = self._clean_text(statement)
+                
+                # Lower the threshold slightly to accept more facts
+                if len(statement.split()) > 4:
                     facts.append({
                         'statement': statement,
-                        'source': 'PIB India',
+                        'source': source_name,
                         'url': entry.get('link', ''),
                         'date': entry.get('published', datetime.now().isoformat()),
-                        'category': 'government_announcement'
+                        'category': 'fact_check' if source_name != 'PIB India' else 'government_announcement'
                     })
             
-            logger.info(f"Scraped {len(facts)} facts from PIB RSS")
+            logger.info(f"✓ Successfully scraped {len(facts)} facts from {source_name}")
             return facts
             
         except Exception as e:
-            logger.error(f"Error scraping PIB RSS: {e}")
+            logger.error(f"Error scraping {source_name}: {e}")
             return []
     
-    def scrape_sample_facts(self) -> List[Dict[str, str]]:
-        """Generate sample facts for testing (fallback)"""
-        sample_facts = [
-            {
-                'statement': 'India achieved 241 GW peak power demand on June 9, 2025 with zero shortage',
-                'source': 'PIB India',
-                'url': 'https://pib.gov.in/sample',
-                'date': '2025-06-10',
-                'category': 'energy'
-            },
-            {
-                'statement': 'The Ayushman Bharat scheme provides health coverage of up to Rs 5 lakh per family per year',
-                'source': 'PIB India',
-                'url': 'https://pib.gov.in/sample',
-                'date': '2025-01-15',
-                'category': 'healthcare'
-            },
-            {
-                'statement': 'IREDA was granted Navratna status by the Government of India',
-                'source': 'PIB India',
-                'url': 'https://pib.gov.in/sample',
-                'date': '2025-03-20',
-                'category': 'business'
-            },
-            {
-                'statement': 'India has 28 states and 8 union territories as of 2024',
-                'source': 'Government of India',
-                'url': 'https://india.gov.in',
-                'date': '2024-01-01',
-                'category': 'geography'
-            },
-            {
-                'statement': 'The Digital India initiative was launched in 2015',
-                'source': 'PIB India',
-                'url': 'https://pib.gov.in/sample',
-                'date': '2015-07-01',
-                'category': 'technology'
-            }
-        ]
-        return sample_facts
     
     def _clean_text(self, text: str) -> str:
         """Clean scraped text"""
@@ -100,14 +99,13 @@ class DataScraper:
         """Scrape all configured sources and return DataFrame"""
         all_facts = []
         
-        # Try PIB RSS
-        pib_facts = self.scrape_pib_rss()
-        all_facts.extend(pib_facts)
+        for name, url in self.sources.items():
+            source_facts = self._scrape_rss(name, url)
+            all_facts.extend(source_facts)
         
-        # Add sample facts if scraping failed
         if len(all_facts) == 0:
-            logger.warning("No facts scraped, using sample data")
-            all_facts = self.scrape_sample_facts()
+            logger.error("No facts scraped from any source!")
+            return pd.DataFrame(columns=['statement', 'source', 'url', 'date', 'category'])
         
         df = pd.DataFrame(all_facts)
         return df

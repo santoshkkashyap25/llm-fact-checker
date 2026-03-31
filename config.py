@@ -2,6 +2,10 @@
 from pathlib import Path
 from typing import Optional
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # --- Paths ---
 BASE_DIR = Path(__file__).resolve().parent
@@ -37,6 +41,11 @@ APP_VERSION = "2.0.0"
 MAX_INPUT_LENGTH = 1000
 
 # --- Data Scraping Settings ---
-PIB_RSS_URL = "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1"
+PIB_RSS_URL = "https://www.pib.gov.in/RssMain.aspx?ModId=6&Lang=1&reg=3"
+FACTLY_RSS_URL = "https://factly.in/feed/"
+WEBQOOF_RSS_URL = "https://www.thequint.com/news/webqoof/rss"
+NEWSCHECKER_RSS_URL = "https://newschecker.in/feed/"
+
 SCRAPE_ENABLED = os.getenv("ENABLE_SCRAPING", "false").lower() == "true"
 SCRAPE_INTERVAL_HOURS = 24
+SCRAPE_LIMIT_PER_SOURCE = 50
