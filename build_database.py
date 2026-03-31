@@ -20,18 +20,19 @@ def main():
         # Step 1: Check if we should scrape new data
         if SCRAPE_ENABLED:
             print("\n[1/3] Scraping fresh data from sources...")
-            facts_df = data_scraper.scrape_all_sources()
-            data_scraper.save_to_csv(facts_df)
-            print(f"[OK] Scraped {len(facts_df)} facts")
+            fresh_df = data_scraper.scrape_all_sources()
+            
+            # Persist and merge with existing data
+            facts_df = data_scraper.upsert_to_csv(fresh_df)
+            print(f"[OK] Added {len(facts_df)} total facts to storage")
         else:
             print("\n[1/3] Loading existing data from CSV...")
             if not FACTS_CSV_PATH.exists():
-                print("[!] CSV not found. Generating sample data...")
-                facts_df = pd.DataFrame(data_scraper.scrape_sample_facts())
-                data_scraper.save_to_csv(facts_df)
-            else:
-                facts_df = pd.read_csv(FACTS_CSV_PATH)
-            print(f"[OK] Loaded {len(facts_df)} facts")
+                print("[!] No data found and scraping is disabled.")
+                return 
+            
+            facts_df = pd.read_csv(FACTS_CSV_PATH)
+            print(f"[OK] Loaded {len(facts_df)} total facts")
         
         # Step 2: Validate data
         print("\n[2/3] Validating data...")

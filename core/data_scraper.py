@@ -110,9 +110,35 @@ class DataScraper:
         df = pd.DataFrame(all_facts)
         return df
     
-    def save_to_csv(self, df: pd.DataFrame):
-        """Save scraped facts to CSV"""
-        df.to_csv(FACTS_CSV_PATH, index=False)
-        logger.info(f"Saved {len(df)} facts to {FACTS_CSV_PATH}")
+    def upsert_to_csv(self, new_df: pd.DataFrame) -> pd.DataFrame:
+        """Merge new facts with existing ones, deduplicating by statement and URL"""
+        if FACTS_CSV_PATH.exists():
+            try:
+                existing_df = pd.read_csv(FACTS_CSV_PATH)
+                logger.info(f"Loaded {len(existing_df)} existing facts from storage")
+                
+                # Combine and deduplicate
+                combined_df = pd.concat([existing_df, new_df], ignore_index=True)
+                
+                # Deduplicate based on statement (semantic) and URL (source-level)
+                initial_count = len(combined_df)
+                combined_df.drop_duplicates(subset=['statement'], keep='first', inplace=True)
+                combined_df.drop_duplicates(subset=['url'], keep='first', inplace=True, ignore_index=True)
+                
+                new_added = len(combined_df) - len(existing_df)
+                logger.info(f"Added {new_added} unique new facts. Total in storage: {len(combined_df)}")
+                
+                df_to_save = combined_df
+            except Exception as e:
+                logger.error(f"Error merging with existing CSV: {e}. Overwriting with new data.")
+                df_to_save = new_df
+        else:
+            logger.info("No existing storage found. Creating new fact database.")
+            df_to_save = new_df
+        
+        # Save to CSV
+        df_to_save.to_csv(FACTS_CSV_PATH, index=False)
+        logger.info(f"Successfully saved {len(df_to_save)} facts to {FACTS_CSV_PATH}")
+        return df_to_save
 
 data_scraper = DataScraper()
